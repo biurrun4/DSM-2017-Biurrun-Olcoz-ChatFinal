@@ -1,0 +1,569 @@
+﻿<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1" />
+    <meta name="description" content="Proyecto Despliegue de Servicios Multimedia" />
+    <meta name="author" content="Carlos Biurrun e Iñigo Olcoz" />
+
+    <title>Chat Biurrun & Olcoz</title>
+    <!-- BOOTSTRAP CORE STYLE CSS -->
+    <link href="css/bootstrap.css" rel="stylesheet" />
+    <link rel="stylesheet" type="text/css" href="css/estilo.css">
+    <!-- EMOJIS -->
+    <link href="https://afeld.github.io/emoji-css/emoji.css" rel="stylesheet">
+
+    <!--SCRIPTS -->
+    <script src="http://ajax.googleapis.com/ajax/libs/jquery/1.11.1/jquery.min.js"></script>
+    <script src="js/bootstrap.min.js"></script>
+    <script src="/socket.io/socket.io.js"></script>
+    <script>
+        var desplegado = false;
+        /*-------------------------------------
+                  GESTION DEL WEB SOCKET
+        --------------------------------------*/
+        $(document).ready(function()
+        {
+        //var socket = io.connect('http://localhost:8080');
+        var socket = io();
+        var userli;
+        var messageli;
+        var serverli;
+        var newUser;
+
+        //usar con la base de datos,lo pongo asi xk en principio no me la pilla
+        var imagen="default.jpg";
+
+        //vamos a guardar nuestro nombre para saber que mensajes son los nuestros
+        var miNombre="";
+
+        //vamos a guardar un contador de los mensajes para que no envie todos de golpe sino de 10 en 10 como maximo
+        var contadorMensajesAnteriores=0;
+
+        var emojis = $('#emoticonos').children();
+
+        // Iniciamos la conexion, cargamos una serie de plantillas HTML para adición de usuarios y mensajes
+        socket.on('connect', function()
+        {
+
+            userli = $.getHtml('userli.html');
+            messageli = $.getHtml('messageli.html');
+            serverli = $.getHtml('serverli.html');
+
+            //tendre ka añadir la ventana emergente aqui
+            newUser = $.getHtml('newUser.html');
+
+            
+            //Notificamos al servidor que ha habido una conexión. Éste nos responderá llamando a la función checkusers
+            socket.emit('start');
+            
+        });
+
+        //Una vez nos conectamos al servidor, éste nos devuelve la lista de usuarios. En primer lugar comprobamos si 
+        //hay menos de diez usuarios para poder conectarnos, y luego comprobaremos que nuestro nombre de usuario
+        //no esté cogido ni vacío
+        socket.on('checkusers',function(users)
+        {
+            
+            if (Object.keys(users).length >= 10) 
+            {
+                alert("Número máximo de usuarios alcanzado").
+                this.disconnect();
+            } else
+            {
+                var nickname =  prompt("Introduzca su nombre:").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+                while(users.indexOf(nickname)!=-1)
+                {
+                    var nickname =  prompt("Ese nombre ya ha sido escogido:");
+                }
+                while(nickname==null || nickname=="")
+                {
+                    var nickname =  prompt("Escoja un nombre válido:");
+                }
+                
+                //almacenamos nuestro nombre
+                miNombre=nickname;
+
+                socket.emit('adduser',miNombre);
+                $('#data').focus();
+            }
+        })
+
+        // Cuando el servidor mande un updatechat, quiere decir que hay mensajes nuevos. Los añadimos
+        socket.on('updatechat', function (username, data, date,imgs) 
+        {
+            
+        	//voy a detectar si el mensaje es mio o no
+        	var id="";
+        	if(username==miNombre)
+            {
+            	id="EsMiMensaje";
+                pull="pull-right"
+            }else
+            {
+            	id="NoEsMiMensaje";
+                pull="pull-left"
+            }
+           /* var data2 = data.replace(new RegExp("\\b&lt;i\\b"),"<i");
+            data2 = data2.replace(new RegExp("\\b&gt;&lt;/i&gt;\\b"),"</i>");
+            console.log(data2);*/
+            var message = messageli.replace(new RegExp('##username##','g'),username);
+            message = message.replace("##message##",data);
+            //console.log(message);
+            message = message.replace("##fecha##",fecha(date));
+            message = message.replace("##imguser##",imgs[username]);
+            message = message.replace("##identificador##",id);
+            message = message.replace(new RegExp('##pull##', 'g'), pull);
+            //console.log($('#conversation').html())
+            $('#conversation').append(message);
+            //Hacemos scroll para hacer visible el nuevo mensaje y el campo de texto
+            var ul = $('#conversation');
+            ul.scrollTop(ul.position().top + ul.height()*contadorMensajesAnteriores)
+            //console.log($('#conversation').html())
+            //Para no repetir los mensajes recibidos con los antiguos
+            contadorMensajesAnteriores=contadorMensajesAnteriores+1;
+
+        });
+
+        // Cuando el servidor mande informacion de conexiones o desconexiones
+  
+        socket.on('serverinfo', function (data,itsme) 
+        {
+            var message = serverli.replace("##message##",data);
+            
+            $('#conversation').append(message);
+
+            ///*
+
+            //Cuando se conecte un nuevo usuario aparezca esta ventana emergente
+	        //va a hacer k aparezca
+            if (!itsme) {
+    	        $('.content').empty();
+    			$(document).ready(function() 
+    			{   
+    		    	setTimeout(function() 
+    		    				{
+    		        				$(".content").fadeIn(1500);
+    		    				},1000);
+    			});
+
+    			//va a hacer k desparezca en 3s
+    			$(document).ready(function() 
+    			{
+    		    	setTimeout(function() 
+    		    				{
+    		        				$(".content").fadeOut(1500);
+    		    				},4000);
+    			});
+    			var windowuser= newUser.replace("##username##",data);
+                
+    			$('.content').append(windowuser);
+            };
+			//*/
+        });
+
+        socket.on('updateusers', function(data,imgs,estados) 
+        {
+            //para vaciar lo k habia antes
+            $('#users').empty();
+
+            var usuariosNombre=data;
+            var userImgs=imgs;
+            var estadoUsuarioEscritura=estados;
+            var escribe="esta escibiendo..."
+
+            for (var i = 0 ; i < (estados.length); i++) 
+      		{
+                var user = userli.replace(new RegExp('##username##','g'), usuariosNombre[i]);
+      			if(estados[i]==false)
+      			{
+      				escribe="";
+      			}else
+      			{
+      				escribe="esta escibiendo...";
+      			}
+                            var id="";
+                if(usuariosNombre[i]==miNombre)
+                {
+                    id="soyYo";
+                }else
+                {
+                    id="noSoyYo";
+                }
+                user = user.replace("##lastconnect##",escribe);
+                user = user.replace("##imguser##",imagen);
+                user = user.replace('##id##', id);
+                $('#users').append(user);
+      		}    
+        });
+
+        //cada mensaje que mandan los usuarios se guardan y tambien el emisor del mensaje y la fecha. Cada vez que un usuario pulse el boton de mensajes anteriores devuleve 10 mensajes anteriores
+        socket.on('oldMessages',function(data,username,date,imgs,mas)
+        {
+
+            if (mas == 0) {
+                $('#mensajesAnteriores').css("display", "none"); //para mostrar
+            };
+            
+            for (var i = 0 ; i < (data.length); i++) 
+      		{
+                //Parseamos mensajes y usuarios para evitar inyeccion HTML
+
+                //vardata = data.replace(/</g, "&lt;").replace(/>/g, "&gt;");
+                //username = username.replace(/</g, "&lt;").replace(/>/g, "&gt;");
+
+      			var message = messageli.replace("##message##",data[i]);
+      			message = message.replace("##username##",username[i]);
+                if(username==miNombre)
+                {
+                    id="EsMiMensaje";
+                    pull="pull-right"
+                }else
+                {
+                    id="NoEsMiMensaje";
+                    pull="pull-left"
+                }
+      			message = message.replace("##fecha##",fecha(date[i]));
+            	message = message.replace("##imguser##",imagen);
+            	message = message.replace("##identificador##",id);
+                message = message.replace(new RegExp('##pull##', 'g'), pull);
+                message = message.replace(new RegExp("&lt;i", 'g'),'<i');
+                message = message.replace(new RegExp("&gt;&lt;/i&gt;", 'g'),'></i>');
+                
+      			
+            	//$('#behinConversation').append(message); 
+      			$('#behinConversation').prepend(message); 
+      		}
+        });
+
+        // Extension de las funcionalidades de jQuery para poder pedir contenidos HTML
+        jQuery.extend
+        ({
+            getHtml: function(url) 
+            {
+                var result = null;
+                $.ajax
+                ({
+                    url: url,
+                    type: 'get',
+                    dataType: 'html',
+                    async: false,
+                    success: function(data) 
+                    {
+                        result = data;
+                    }
+                });
+               return result;
+            }
+        });
+
+        /* 
+         * Return outerHTML for the first element in a jQuery object,
+         * or an empty string if the jQuery object is empty;  
+         */
+        jQuery.fn.outerHTML = function() {
+           return (this[0]) ? this[0].outerHTML : '';  
+        };
+
+        //COMPROBAMOS LA FECHA
+        //Si coinciden, revolvemos "Hoy, hh:mm", si no, devolvemos "dd/mm, hh:mm"
+
+        function addZero(i) {
+            if (i < 10) {
+                i = "0" + i;
+            }
+            return i;
+        }
+
+        function fecha(d1){
+            var fecha = new Date(d1); //Era de tipo string
+            var ahora = new Date(Date.now());
+            var h = addZero(fecha.getHours());
+            var m = addZero(fecha.getMinutes());
+          if(fecha.getUTCFullYear() == ahora.getUTCFullYear() &&
+            fecha.getUTCMonth() == ahora.getUTCMonth() &&
+            fecha.getUTCDate() == ahora.getUTCDate()){
+
+                return "Hoy, "+h+":"+m;
+          } else{
+                return [addZero(fecha.getDate()),addZero(fecha.getMonth()+1),addZero(fecha.getFullYear())].join('/') +", "+ h + ":" +m;
+          }
+        }
+
+        function setEndOfContenteditable(contentEditableElement)
+        {
+            var range,selection;
+            if(document.createRange)//Firefox, Chrome, Opera, Safari, IE 9+
+            {
+                range = document.createRange();//Create a range (a range is a like the selection but invisible)
+                range.selectNodeContents(contentEditableElement);//Select the entire contents of the element with the range
+                range.collapse(false);//collapse the range to the end point. false means collapse to end rather than the start
+                selection = window.getSelection();//get the selection object (allows you to change selection)
+                selection.removeAllRanges();//remove any selections already made
+                selection.addRange(range);//make the range you have just created the visible selection
+            }
+            else if(document.selection)//IE 8 and lower
+            { 
+                range = document.body.createTextRange();//Create a range (a range is a like the selection but invisible)
+                range.moveToElementText(contentEditableElement);//Select the entire contents of the element with the range
+                range.collapse(false);//collapse the range to the end point. false means collapse to end rather than the start
+                range.select();//Select the range (make it the visible selection
+            }
+        }
+
+        /*var position = 0;
+
+        $('#data').on("mousedown mouseup keydown keyup", function() {
+            position = getCaretPosition(this);
+            console.log(position);
+          });*/
+        // Funciones a tener en cuenta
+
+            //Al cargar la pagina miro el ancho y en función de ello despliego lo de usuarios o no
+            
+            $(document).on("click", "#menuuser",function(){
+                //console.log('Antes ' + desplegado)
+                desplegado = !desplegado;
+               //console.log("despues " + desplegado);
+            });
+
+            $(document).on("click", ".em",function(){
+                var texto = $('#data');
+                //var texto = data.text();
+                var emoji = $(this).outerHTML();
+                $('#data').css({
+                    height: '5vh'
+                });
+                //data.text(dataemoji);
+                //data.text(texto.slice(0, position));
+                texto.append(emoji);
+                //data.append(texto.slice(position));
+                //data.append($(this).outerHTML()+'')
+                //$('#data').focus();
+                //apaño
+                /*var valor = data.val(); //store the value of the element
+                data.val(''); //clear the value of the element
+                data.val(valor); //set that value back.  */
+                setEndOfContenteditable(texto.get(0));
+
+            });
+
+            // PARA CONTROLAR DISPLAY EN FUNCION DEL TAMAÑO DE LA VENTANA
+
+            if ($(window).width() > 980) {//Pantalla grande
+                if (!desplegado) {
+                    //console.log('Estaba ' + !desplegado + ', por lo que despliego 1');
+                    $('#menuuser').click(); //Muestra automaticamente el menu usuarios
+                }
+            } else{ //Pantalla pequeña 
+                $('#users').css({ // elimina la altura minima de la seccion de usuarios
+                    'min-height': '0'
+                });
+            };
+
+            $( window ).resize(function() {
+                var height = $(window).height();
+                $('body').css('max-height',height);
+                if ($(window).width() > 980) { //Pantalla grande
+                    if (!desplegado) { //Muestra automaticamente el menu usuarios
+                        $('#menuuser').click();
+                        //console.log('Estaba ' + !desplegado + ', por lo que despliego 2')
+                    };
+                    $('#users').css({ // restaura la altura minima de la seccion de usuarios
+                        'min-height': '70.5vh'
+                    });
+                } else{ //Pantalla pequeña
+                    if (desplegado) { //recoge automaticamente el menu usuarios
+                        $('#menuuser').click();
+                       // console.log('Estaba ' + !desplegado + ', por lo que recojo 3')
+                    };
+                   $('#users').css({ // elimina la altura minima de la seccion de usuarios
+                        'min-height': '0'
+                    });
+                }
+            });
+
+
+            var height =  $(window).height();
+            $('body').css('max-height',height);
+
+            // Cada vez que le demos a enviar
+            $('#datasend').click( function() 
+            {
+                //Extraemos el mensaje a mandar
+                if ($("#data").html().replace(/^\s+|\s+$/g, "").length != 0){
+
+                    var message = $('#data').html();
+
+                    // Decirle al servidor que le mandas un mensaje nuevo, para que haga las acciones oportunas
+                    socket.emit('sendchat', message/*.replace(/</g, "&lt;").replace(/>/g, "&gt;")*/);
+                
+                    //console.log('ENVIADO ' + message)
+                    
+                    // Ponemos el focus en el campo de texto para seguir escribiendo
+                    $('#data').focus();
+
+                    //Reseteamos el campo
+                    $('#data').html("");
+                    
+                    //Hacemos scroll para hacer visible el nuevo mensaje y el campo de texto
+                    //$('#data').scrollIntoView();
+                }
+                
+                
+            });
+
+            // Cuando se pida mostrar/ocultar los mensajes anteriores
+
+        	$("#mensajesAnteriores").click(function()
+        	{
+        		socket.emit('obtenerMensajesAnteriores', contadorMensajesAnteriores);
+        		contadorMensajesAnteriores=contadorMensajesAnteriores+10;
+        		$('#behinConversation').css("display", "block"); //para mostrar
+                $('#mensajesAnterioresOcultos').css("display", "block"); //para mostrar
+
+        	});
+        	$("#mensajesAnterioresOcultos").click(function()
+        	{
+        		$('#behinConversation').css("display", "none"); //para ocultar
+                $('#mensajesAnterioresOcultos').css("display", "none"); //para ocultar
+                $('#mensajesAnteriores').css("display", "block"); //para mostrar
+        	});
+
+        //vamos a detectar cuando pulsa cualquier letra
+            // Cuando presionemos cualquier tecla, que funcione como darle al send
+            $('#data').keypress(function(e) 
+            {
+                if(e.which !=null) 
+                {
+                    if(e.which == 13) 
+                    {
+                        $('#datasend').click();
+                       return e.which != 13; 
+                    } else {
+                        //Le enviamos al servidor que estamos escribiendo y le decimos quien es
+                        socket.emit('UserWritting',miNombre); 
+                    }
+                }
+            });
+
+            $('#data').keyup(function(e) 
+            {
+            	if(e.which !=null) 
+                {
+                    //Le enviamos al servidor que estamos escribiendo y le decimos quien es
+                    socket.emit('UserNotWritting',miNombre); 
+                }
+            });
+        
+            // Cuando clickemos en un usuario, hacer algo!
+            $(document).on("click", ".user",function()
+            {
+                
+                var message = $(this).attr('id')
+                alert("se ha pulsado el usuario "+message);
+            });
+
+
+        });
+
+
+
+    </script>
+
+</head>
+    <body style="font-family:Verdana">
+        <div class="container">
+            <div class="row " style="padding-top:20px;">
+                
+                <div class="row title">
+                    <h3 class="text-center" >
+                         Proyecto Chat
+                    </h3>
+                    <h4 class="text-center" > Carlos Biurrun & Iñigo Olcoz</h4>
+                    <br />
+
+                </div>
+                
+                <div class="col-md-4">
+                    <div class="panel panel-primary">
+                        <div class="panel-heading" style="color:white">
+                            <span data-toggle="collapse" href="#collapse" id ="menuuser">USUARIOS CONECTADOS <span class="caret"></span></span>
+                        </div>
+                        <div class="panel-body panel-collapse collapse" id="collapse">
+                            <ul id="users" class="media-list">
+                                
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-8">
+                    <div class="panel panel-primary" id="chat">
+                        <div class="panel-heading">
+                            CHAT
+                        </div>
+                        <div class="panel-body">
+                             
+                            <ul id="conversation" class="media-list" style="position: relative;">
+                                <!-- Para los mensajes  -->
+                                <li><div id="Botones">
+                                    <button class="btn btn-info btn-sm" id="mensajesAnteriores" type="button" >Mostrar mensajes anteriores</button>
+
+                                    <ul id="behinConversation" class="media-list">
+                                    <!-- Para que muestre los mensajes anteriores  -->
+                                    </ul>
+                                    <br>
+                                    <button class="btn btn-info btn-sm" id="mensajesAnterioresOcultos" type="button" >Ocultar mensajes anteriores</button>
+                            </div></li>
+                            </ul>
+                        </div>
+                        <div class="panel-footer">
+                            <div class="input-group">
+                                <div contenteditable="true" id='data' class='form-control'>
+                                </div>
+                                <!--<input type="text" id="data" class="form-control" placeholder="Enviar Mensaje" />-->
+                                <span class="input-group-btn">
+                                    <button class="btn btn-info" id="datasend" type="button">ENVIAR</button>
+                                </span>
+                            </div>
+                        </div>
+                        <div class="panel-footer" id="emoticonos">
+                            <i contenteditable="false" class="em em---1" ></i>
+                            <i contenteditable="false" class="em em-ok_hand" ></i>
+                            <i contenteditable="false" class="em em-clap" ></i>
+                            <i contenteditable="false" class="em em-facepunch" ></i>
+                            <i contenteditable="false" class="em em-fu" ></i>
+                            <i contenteditable="false" class="em em-metal" ></i>
+                            <i contenteditable="false" class="em em-muscle" ></i>
+                            <i contenteditable="false" class="em em-beers" ></i>
+                            <i contenteditable="false" class="em em-heart" ></i>
+                            <i contenteditable="false" class="em em-broken_heart" ></i>
+                            <i contenteditable="false" class="em em-confounded" ></i>
+                            <i contenteditable="false" class="em em-cry" ></i>
+                            <i contenteditable="false" class="em em-disappointed" ></i>
+                            <i contenteditable="false" class="em em-disappointed_relieved" ></i>
+                            <i contenteditable="false" class="em em-expressionless" ></i>
+                            <i contenteditable="false" class="em em-grin" ></i>
+                            <i contenteditable="false" class="em em-grinning" ></i>
+                            <i contenteditable="false" class="em em-heart_eyes" ></i>
+                            <i contenteditable="false" class="em em-innocent" ></i>
+                            <i contenteditable="false" class="em em-kissing_heart" ></i>
+                            <i contenteditable="false" class="em em-laughing" ></i>
+                            <i contenteditable="false" class="em em-neutral_face" ></i>
+                            <i contenteditable="false" class="em em-pensive" ></i>
+                            <i contenteditable="false" class="em em-sleepy" ></i>
+                            <i contenteditable="false" class="em em-yum" ></i>
+                            <i contenteditable="false" class="em em-wink" ></i>
+                            <i contenteditable="false" class="em em-trollface" ></i>
+                        </div>
+                    </div>
+
+                </div>
+                <!-- PARA LA VENTANA EMERGENTE  -->
+            	<div class="content" style="display:none;">
+    				
+    			</div>
+            </div>
+        </div>
+    </body>
+</html>

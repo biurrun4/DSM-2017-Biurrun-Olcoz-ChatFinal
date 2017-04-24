@@ -1,0 +1,80 @@
+#conversation
+{
+	overflow-y: scroll;
+	min-height: 60vh;
+	max-height: 60vh;
+}
+#chat{
+	min-height: 75vh;
+}
+#users{
+	/*overflow-y: scroll;*/
+	max-height: 70.5vh;
+	min-height: 70.5vh;
+}
+body {
+	margin: 0; 
+	height: 100%; 
+	overflow-y: scroll;
+	overflow-x: hidden;
+	background: url('../img/background.jpg');
+}
+
+#behinConversation 
+{
+	display: none;
+}
+.EsMiMensaje div
+{
+	background-color: #48C9B0 ;
+	border-radius: 5px;
+	color: white;
+	display: inline-block;
+	padding:5px 15px 5px 15px;
+}
+.NoEsMiMensaje div
+{
+	background-color:#A9CCE3;
+	border-radius: 5px;
+	color: white;
+	display: inline-block;
+	padding:5px 15px 5px 15px;
+}
+
+.soyYo{
+	color: #12BC0D ;
+}
+
+#Botones button
+{
+  	margin: 1% 20% 1% 20%;
+  	width:59%;
+  	text-align: center;
+}
+.estadoEscritura
+{
+	color: green;
+}
+
+#mensajesAnterioresOcultos{
+	display: none;
+}
+
+.title{
+	color:white;
+}
+
+div[contenteditable=true] {
+
+  -webkit-appearance: field;
+  appearance: field;
+  overflow-y: scroll;
+}
+
+div[contenteditable=true]:focus{
+	height : 5vh;
+}
+
+#datasend{
+	margin-left: 5px;
+}
