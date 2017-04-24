@@ -1,0 +1,30 @@
+{
+  "name": "dsm-biurrun-olcoz-chat",
+  "version": "1.0.0",
+  "description": "Chat para asignatura DSM",
+  "main": "chat.js",
+  "dependencies": {
+    "express": "^4.15.2",
+    "mongodb": "^2.2.25",
+    "mongoose": "^4.9.2",
+    "node": "^0.0.0",
+    "socketio": "^1.0.0"
+  },
+  "devDependencies": {},
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/biurrun4/DSM-2017-Biurrun-Olcoz-ChatFinal.git"
+  },
+  "keywords": [
+    "chat"
+  ],
+  "author": "Carlos Biurrun & Inigo Olcoz",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/biurrun4/DSM-2017-Biurrun-Olcoz-ChatFinal/issues"
+  },
+  "homepage": "https://github.com/biurrun4/DSM-2017-Biurrun-Olcoz-ChatFinal#readme"
+}
