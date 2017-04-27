@@ -138,7 +138,7 @@
             ///*
 
             //Cuando se conecte un nuevo usuario aparezca esta ventana emergente
-	        //va a hacer k aparezca
+	        //va a hacer que aparezca
             if (!itsme) {
     	        $('.content').empty();
     			$(document).ready(function() 
@@ -149,7 +149,7 @@
     		    				},1000);
     			});
 
-    			//va a hacer k desparezca en 3s
+    			//va a hacer que desparezca en 3s
     			$(document).ready(function() 
     			{
     		    	setTimeout(function() 
@@ -260,8 +260,8 @@
         });
 
         /* 
-         * Return outerHTML for the first element in a jQuery object,
-         * or an empty string if the jQuery object is empty;  
+         * Devuelve outerHTMLdel primer elemento en un jQuery object,
+         * o un string vacio si el objeto esta vacio;  
          */
         jQuery.fn.outerHTML = function() {
            return (this[0]) ? this[0].outerHTML : '';  
@@ -459,12 +459,12 @@
             });
         
             // Cuando clickemos en un usuario, hacer algo!
-            $(document).on("click", ".user",function()
+            /*$(document).on("click", ".user",function()
             {
                 
                 var message = $(this).attr('id')
                 alert("se ha pulsado el usuario "+message);
-            });
+            });*/
 
 
         });
